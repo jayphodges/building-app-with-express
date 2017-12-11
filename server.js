@@ -1,6 +1,9 @@
 var express = require('express')
 var app = express()
 var bodyParser = require('body-parser')
+const environment = process.env.NODE_ENV || 'development'
+const configuration = require('./knexfile')[environment]
+const database = require('knex')(configuration)
 
 app.set('port', process.env.PORT || 3000)
 app.locals.title = 'Secret Box'
@@ -16,11 +19,17 @@ app.get('/', function(request, response) {
 
 app.get('/api/secrets/:id', function(request, response){
   var id = request.params.id
-  var message = app.locals.secrets[id]
 
-  if (!message) { return response.sendStatus(404) }
+  database.raw(`SELECT * FROM secrets WHERE id = ?`, [id])
+    .then(function(data) {
+      response.json(data.rows)
+    })
 
-  response.json({ id, message })
+  // var message = app.locals.secrets[id]
+  //
+  // if (!message) { return response.sendStatus(404) }
+  //
+  // response.json({ id, message })
 })
 
 app.post('/api/secrets', function(request, response){

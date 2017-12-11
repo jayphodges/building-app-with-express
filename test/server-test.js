@@ -1,9 +1,12 @@
 var assert = require('chai').assert
 var app = require('../server')
 var request = require('request')
+const environment = process.env.NODE_ENV || 'test'
+const configuration = require('../knexfile')[environment]
+const database = require('knex')(configuration)
 
 describe('Server', function(){
-  before(function(done){
+  before(function(){
     this.port = 9876
     this.server = app.listen(this.port, function(err, result){
       if(err) { return done(err) }
@@ -42,9 +45,12 @@ describe('Server', function(){
 
   describe('GET /api/secrets/:id', function(){
     beforeEach(function(){
-      app.locals.secrets = {
-        wowowow: 'I am a banana'
-      }
+      database.raw(
+        'INSERT INTO secrets (message, created_at) VALUES (?, ?)',
+        ["I hate game shows", new Date])
+        .then(function() {
+          done()
+        })
     })
 
     it('should return a 404 if the resource is not found', function(done){
@@ -56,8 +62,9 @@ describe('Server', function(){
     })
 
     it('should have the id and message from the resource', function(done){
-      var id = 'wowowow'
-      var message = app.locals.secrets[id]
+      var id = '1'
+      var message = "I hate game shows"
+
       this.request.get('/api/secrets/' + id, function(error, response){
         if (error) { done(error) }
         assert.include(response.body, id)
